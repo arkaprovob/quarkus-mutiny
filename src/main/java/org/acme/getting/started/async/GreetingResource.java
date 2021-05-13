@@ -29,6 +29,7 @@ public class GreetingResource {
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/greeting/{name}")
     public Uni<String> greeting(@PathParam String name) {
+        System.out.println("inside rest resource");
         return service.greeting(name).onItem()
                 .transform(s ->{
                     System.out.println("`transform(s ->{})`  is running on Thread "+Thread.currentThread().getName());
@@ -41,7 +42,10 @@ public class GreetingResource {
                 }).recoverWithItem(()->{
                     System.out.println("`recoverWithItem` is on Thread "+Thread.currentThread().getName());
                     return "Damn not again...";
-                });
+                })/*.subscribe().with(s-> {
+                    System.out.println("`subscription` is on Thread "+Thread.currentThread().getName());
+                    System.out.println("output is "+s);
+                })*/;
     }
 
     @GET

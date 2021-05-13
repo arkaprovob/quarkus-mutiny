@@ -24,6 +24,7 @@ public class GreetingService {
         System.out.println("\n\n");
         System.out.println("`greeting(String name)` Executing on Thread "+Thread.currentThread().getName());
 
+        // Creating an UNI
         return Uni
                 .createFrom()
                 .item(() -> {
