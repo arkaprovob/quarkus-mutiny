@@ -30,6 +30,7 @@ public class GreetingResource {
     @Path("/greeting/{name}")
     public Uni<String> greeting(@PathParam String name) {
         return service.greeting(name);
+                //.subscribe().with(resp-> System.out.println(resp),failure->System.out.println(failure))
     }
 
     @GET

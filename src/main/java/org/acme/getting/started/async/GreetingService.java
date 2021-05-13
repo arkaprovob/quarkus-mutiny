@@ -28,7 +28,7 @@ public class GreetingService {
 
         return Uni
                 .createFrom()
-                .item(name)
+                .item(name) //synchronous now imagine you have retrieve a value from an I/O call you will have to pass a supplier, ref README.md#Links.1
                 .emitOn(emitExecutor)
                 .onItem()
                 .transform(parameter-> {
@@ -36,11 +36,8 @@ public class GreetingService {
                     assert Thread.currentThread().getName().equals(threadName);
                     return ioSimulation(parameter);
                 }).onFailure()
-                .recoverWithItem(()->{
-                    log.debug("`recoverWithItem` executing on thread {}",Thread.currentThread().getName());
-                    assert Thread.currentThread().getName().equals(threadName);
-                    return "something went wrong.. please bear with us";
-                });
+                .retry() // warning! if your system can handle duplicate requests or entries only then use it function ref README.md#Links.2
+                .atMost(8); // will try 8 times in case of failure
 
     }
 
@@ -49,9 +46,11 @@ public class GreetingService {
         log.debug("`ioSimulation(String param)` Executing on Thread {}",Thread.currentThread().getName());
         assert Thread.currentThread().getName().equals(threadName);
         try {
-            Thread.sleep(8000);
-            if (new Random().nextBoolean())
+            Thread.sleep(3000);
+            if (new Random().nextBoolean()){
+                log.info("Exception occurred");
                 throw new RuntimeException("something went wrong");
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
