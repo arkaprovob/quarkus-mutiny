@@ -25,10 +25,6 @@ public class GreetingService {
     ThreadFactory emitOnThreadFactory = new NameableThreadFactory(threadName);
     ExecutorService emitExecutor = Executors.newFixedThreadPool(10, emitOnThreadFactory);
 
-    @PostConstruct
-    void init(){
-        MockPickyWebService.startPickyService();
-    }
 
     public Uni<String> greeting(String name) {
         log.info("\n\n");
