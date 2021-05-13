@@ -4,6 +4,8 @@ import javax.enterprise.context.ApplicationScoped;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOError;
 import java.util.Random;
@@ -15,35 +17,37 @@ import java.util.function.Supplier;
 @ApplicationScoped
 public class GreetingService {
 
-    ThreadFactory threadFactory = new NameableThreadFactory("CUSTOM_TASK_SUBSCRIPTION_EXECUTION_THREAD");
-    ExecutorService subscriptionExecutor = Executors.newFixedThreadPool(10, threadFactory);
-    ThreadFactory emitOnThreadFactory = new NameableThreadFactory("CUSTOM_TASK_EMIT_ON_EXECUTION_THREAD");
+    private static final Logger log = LoggerFactory.getLogger(GreetingService.class.getName());
+    private static String threadName = "CUSTOM_TASK_EMIT_ON_EXECUTION_THREAD";
+    ThreadFactory emitOnThreadFactory = new NameableThreadFactory(threadName);
     ExecutorService emitExecutor = Executors.newFixedThreadPool(10, emitOnThreadFactory);
 
     public Uni<String> greeting(String name) {
-        System.out.println("\n\n");
-        System.out.println("`greeting(String name)` Executing on Thread "+Thread.currentThread().getName());
+        log.info("\n\n");
+        log.info("\t`greeting(String name)` Executing on Thread {}",Thread.currentThread().getName());
 
-        // Creating an UNI
         return Uni
                 .createFrom()
-                .item(() -> {
-                    System.out.println("`()Supplier` invoked on Thread "+Thread.currentThread().getName());
-                    return GreetingService.this.ioSimulation(name);
-                })
-                .runSubscriptionOn(subscriptionExecutor) //Infrastructure.getDefaultExecutor()
+                .item(name)
                 .emitOn(emitExecutor)
                 .onItem()
-                .transform(s-> {
-                    System.out.println("`(p)>Transform` invoked on Thread "+Thread.currentThread().getName());
-                    return s+" Further Transformation XXX";
+                .transform(parameter-> {
+                    log.debug("`(p)>Transform` invoked on Thread {}",Thread.currentThread().getName());
+                    assert Thread.currentThread().getName().equals(threadName);
+                    return ioSimulation(parameter);
+                }).onFailure()
+                .recoverWithItem(()->{
+                    log.debug("`recoverWithItem` executing on thread {}",Thread.currentThread().getName());
+                    assert Thread.currentThread().getName().equals(threadName);
+                    return "something went wrong.. please bear with us";
                 });
 
     }
 
 
     public String ioSimulation(String param){
-        System.out.println("`ioSimulation(String param)` Executing on Thread "+Thread.currentThread().getName());
+        log.debug("`ioSimulation(String param)` Executing on Thread {}",Thread.currentThread().getName());
+        assert Thread.currentThread().getName().equals(threadName);
         try {
             Thread.sleep(8000);
             if (new Random().nextBoolean())
