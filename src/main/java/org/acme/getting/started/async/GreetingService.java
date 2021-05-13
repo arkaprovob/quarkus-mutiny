@@ -4,18 +4,14 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 
 import io.smallrye.mutiny.Uni;
-import io.smallrye.mutiny.infrastructure.Infrastructure;
-import org.acme.getting.started.async.mockio.MockPickyWebService;
+import org.acme.getting.started.async.mockio.MockServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOError;
-import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
-import java.util.function.Supplier;
 
 @ApplicationScoped
 public class GreetingService {
@@ -25,6 +21,10 @@ public class GreetingService {
     ThreadFactory emitOnThreadFactory = new NameableThreadFactory(threadName);
     ExecutorService emitExecutor = Executors.newFixedThreadPool(10, emitOnThreadFactory);
 
+    @PostConstruct
+    void init(){
+        MockServer.startPickyService();
+    }
 
     public Uni<String> greeting(String name) {
         log.info("\n\n");
@@ -42,12 +42,12 @@ public class GreetingService {
                         return ioSimulation(parameter,Thread.currentThread().getName()).subscribeAsCompletionStage().get();
                     } catch (InterruptedException | ExecutionException e) {
                         log.error("failed to execute ioSimulation due to {}",e.getMessage());
-                        return "error occured";
+                        throw new RuntimeException("failed to communicate with client {}"+e.getMessage());
                     }
                 }).onFailure()
                 .retry() // warning! if your system can handle duplicate requests or entries only then use it function ref README.md#Links.2
                 //.when()
-        .indefinitely();
+        .atMost(2);
 
     }
 
@@ -55,12 +55,11 @@ public class GreetingService {
     public Uni<String> ioSimulation(String param,String threadName){
         log.debug("`ioSimulation(String param)` Executing on Thread {}",Thread.currentThread().getName());
         assert Thread.currentThread().getName().equals(threadName);
-        return MockPickyWebService.client
+        return MockServer.client
                 .getAbs("http://localhost:80")
                 .addQueryParam("name",param)
                 .send()
                 .onItem().transform(response-> {
-                    log.info("*************************************");
                     if (response.statusCode() == 200){
                         return response.bodyAsString();
                     }else{
