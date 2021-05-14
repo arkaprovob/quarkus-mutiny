@@ -35,19 +35,10 @@ public class GreetingService {
                 .item(name) //synchronous now imagine you have retrieve a value from an I/O call you will have to pass a supplier, ref README.md#Links.1
                 .emitOn(emitExecutor)
                 .onItem()
-                .transform(parameter-> {
-                    log.debug("`(p)>Transform` invoked on Thread {}",Thread.currentThread().getName());
-                    assert Thread.currentThread().getName().equals(threadName);
-                    try {
-                        return ioSimulation(parameter,Thread.currentThread().getName()).subscribeAsCompletionStage().get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        log.error("failed to execute ioSimulation due to {}",e.getMessage());
-                        throw new RuntimeException("failed to communicate with client {}"+e.getMessage());
-                    }
-                }).onFailure()
-                .retry() // warning! if your system can handle accidental duplicate requests or entries, then use it.  ref README.md#Links.2
-                //.when() // i have to figure this out
-        .atMost(2); // it's not a random number, setting no of attempts 2 makes it  easy to demonstrate what happens when it exceed the limit.
+                .transformToUni(parameter -> ioSimulation(parameter,Thread.currentThread().getName()))
+                .onFailure()
+                .retry()
+        .atMost(2);
 
     }
 
