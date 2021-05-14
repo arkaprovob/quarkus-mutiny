@@ -45,9 +45,9 @@ public class GreetingService {
                         throw new RuntimeException("failed to communicate with client {}"+e.getMessage());
                     }
                 }).onFailure()
-                .retry() // warning! if your system can handle duplicate requests or entries only then use it function ref README.md#Links.2
-                //.when()
-        .atMost(2);
+                .retry() // warning! if your system can handle accidental duplicate requests or entries, then use it.  ref README.md#Links.2
+                //.when() // i have to figure this out
+        .atMost(2); // it's not a random number, setting no of attempts 2 makes it  easy to demonstrate what happens when it exceed the limit.
 
     }
 
