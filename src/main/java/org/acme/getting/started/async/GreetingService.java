@@ -40,7 +40,7 @@ public class GreetingService {
                 .onItem()
                 .transformToUni(parameter -> ioSimulation(parameter, Thread.currentThread()
                         .getName())
-                        .map(HttpResponse::bodyAsString)
+                        .map(HttpResponse::bodyAsString) // Transforming the Uni of HttpResponse<Buffer> to String
                 )
                 .onFailure()
                 .retry()
