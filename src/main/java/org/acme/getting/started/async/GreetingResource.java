@@ -11,6 +11,8 @@ import org.jboss.resteasy.annotations.jaxrs.PathParam;
 
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -20,7 +22,7 @@ import java.util.concurrent.ThreadFactory;
 public class GreetingResource {
     ThreadFactory threadFactory = new NameableThreadFactory("RESOURCE_EMIT_ON_THREAD");
     ExecutorService executor = Executors.newFixedThreadPool(10, threadFactory);
-
+    private static final Logger log = LoggerFactory.getLogger(GreetingResource.class.getName());
     @Inject
     GreetingService service;
 
@@ -30,6 +32,43 @@ public class GreetingResource {
     public Uni<String> greeting(@PathParam String name) {
         return service.greeting(name);
                 //.subscribe().with(resp-> System.out.println(resp),failure->System.out.println(failure))
+    }
+
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/greeting/callback/{name}")
+    public Uni<String> greetingCallback(@PathParam String name) {
+        return service.callbackGreeting(name);
+
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/wish/{name}")
+    public String wish(@PathParam String name) {
+        return service.emitterExample(name);
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/wish/blocking/{name}")
+    public void wishBlocking(@PathParam String name) {
+        Uni.createFrom()
+                .item(()->service.emitterExample(name))
+                .subscribe()
+                .with(consumer-> log.info("method wishBlocking executed on thread {}",Thread.currentThread().getName()));
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/wish/async/{name}")
+    public void wishAsync(@PathParam String name) {
+        Uni.createFrom()
+                .item(service.emitterExample(name))
+                .runSubscriptionOn(executor)
+                .subscribe()
+                .with(consumer-> log.info("method wishAsync executed on thread {}",Thread.currentThread().getName()));
     }
 
 /*    @GET

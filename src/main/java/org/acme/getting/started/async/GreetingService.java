@@ -10,6 +10,7 @@ import org.acme.getting.started.async.mockio.MockServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Random;
 import java.util.concurrent.*;
 
 @ApplicationScoped
@@ -19,6 +20,7 @@ public class GreetingService {
     private static String threadName = "CUSTOM_TASK_EMIT_ON_EXECUTION_THREAD";
     ThreadFactory emitOnThreadFactory = new NameableThreadFactory(threadName);
     ExecutorService emitExecutor = Executors.newFixedThreadPool(10, emitOnThreadFactory);
+    private static final Random random = new Random();
 
     @PostConstruct
     void init(){
@@ -49,6 +51,52 @@ public class GreetingService {
 
     }
 
+    public Uni<String> callbackGreeting(String name) {
+        log.info("\n\n");
+        log.info("\t`callbackGreeting(String name)` Executing on Thread {}",Thread.currentThread().getName());
+
+        return Uni
+                .createFrom()
+                .item(name) //synchronous now imagine you have retrieve a value from an I/O call you will have to pass a supplier, ref README.md#Links.1
+                .emitOn(emitExecutor)
+                .onItem()
+                .transformToUni(param->{
+                    return Uni.createFrom().emitter(em->{
+                        ioSimulation(param, Thread.currentThread().getName())
+                                .subscribe()
+                                .with(success-> em.complete(success.bodyAsString()), //putting result of uni ioSimulation into the callback
+                                        exception->{
+                                    log.info("the following error occurred before sending to em.complete {}",exception.getMessage());
+                                    em.fail(exception);
+                                        });
+
+                    });
+                })
+                .onFailure()
+                .retry()
+                .atMost(2)
+                .map(item-> "Operation completed with item "+item);
+
+    }
+
+    public String emitterExample(String input){
+        log.info("method emitterExample executing on thread {}",Thread.currentThread().getName());
+        Uni<String> cache = Uni.createFrom().emitter(em-> new Thread(()->{
+            try {
+                log.info("emitter executing on thread {}",Thread.currentThread().getName());
+                Thread.sleep(2000);
+                if (random.nextBoolean()) {
+                    String result = "have a great day "+input;
+                    em.complete(result);
+                }else{
+                    em.fail(new RuntimeException("random boolean returned false"));
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start());
+        return cache.await().indefinitely();
+    }
 
     public Uni<HttpResponse<Buffer>> ioSimulation(String param, String threadName){
         log.debug("`ioSimulation(String param)` Executing on Thread {}",Thread.currentThread().getName());
