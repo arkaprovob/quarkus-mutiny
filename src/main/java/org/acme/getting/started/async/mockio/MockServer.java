@@ -38,6 +38,7 @@ public class MockServer {
 
 
                     } else {
+                        log.info("error simulation block reached");
                         req.response().setStatusCode(500).endAndForget("error simulation");
                     }
                 })

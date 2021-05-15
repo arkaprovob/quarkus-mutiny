@@ -4,14 +4,13 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 
 import io.smallrye.mutiny.Uni;
+import io.vertx.mutiny.core.buffer.Buffer;
+import io.vertx.mutiny.ext.web.client.HttpResponse;
 import org.acme.getting.started.async.mockio.MockServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 
 @ApplicationScoped
 public class GreetingService {
@@ -29,21 +28,29 @@ public class GreetingService {
     public Uni<String> greeting(String name) {
         log.info("\n\n");
         log.info("\t`greeting(String name)` Executing on Thread {}",Thread.currentThread().getName());
-
+        Uni<String> future = Uni
+                // Create from a Completion Stage
+                .createFrom().completionStage(CompletableFuture.supplyAsync(() -> "hello"));
         return Uni
                 .createFrom()
                 .item(name) //synchronous now imagine you have retrieve a value from an I/O call you will have to pass a supplier, ref README.md#Links.1
                 .emitOn(emitExecutor)
+                .onItem() //not required just used for experimental purpose
+                .transform(k->k) //not required just used for experimental purpose
                 .onItem()
-                .transformToUni(parameter -> ioSimulation(parameter,Thread.currentThread().getName()))
+                .transformToUni(parameter -> ioSimulation(parameter, Thread.currentThread()
+                        .getName())
+                        .map(HttpResponse::bodyAsString)
+                )
                 .onFailure()
                 .retry()
-        .atMost(2);
+                .atMost(2)
+                .map(item-> "Operation completed with item "+item);
 
     }
 
 
-    public Uni<String> ioSimulation(String param,String threadName){
+    public Uni<HttpResponse<Buffer>> ioSimulation(String param, String threadName){
         log.debug("`ioSimulation(String param)` Executing on Thread {}",Thread.currentThread().getName());
         assert Thread.currentThread().getName().equals(threadName);
         return MockServer.client
@@ -52,7 +59,7 @@ public class GreetingService {
                 .send()
                 .onItem().transform(response-> {
                     if (response.statusCode() == 200){
-                        return response.bodyAsString();
+                        return response;
                     }else{
                         throw  new IllegalStateException(response.bodyAsString());
                     }
