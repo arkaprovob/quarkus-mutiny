@@ -1,7 +1,6 @@
 package org.acme.getting.started.async.mockio;
 
 import io.smallrye.mutiny.Uni;
-import io.vertx.mutiny.core.Future;
 import io.vertx.mutiny.core.Vertx;
 import io.vertx.mutiny.ext.web.client.WebClient;
 import org.slf4j.Logger;
@@ -26,14 +25,14 @@ public class MockServer {
                     if (random.nextBoolean()) {
                         String param = req.getParam("name");
 
-                        executeMockedBlockingOperation().subscribe().with(res->{  //because of laziness without subscription the result wont return to the requester
-                            log.info("output of executeBlocking operation is {}",res);
-                            req.response().endAndForget("Hello! there "+param);
-                        },throwable -> {
-                            log.info("something went wrong {}",throwable.getMessage());
-                            req.response().endAndForget("hi "+param+
+                        executeMockedBlockingOperation().subscribe().with(res -> {  //because of laziness without subscription the result wont return to the requester
+                            log.info("output of executeBlocking operation is {}", res);
+                            req.response().endAndForget("Hello! there " + param);
+                        }, throwable -> {
+                            log.info("something went wrong {}", throwable.getMessage());
+                            req.response().endAndForget("hi " + param +
                                     " sorry to inform you that the blocking call failed due to "
-                                    +throwable.getMessage());
+                                    + throwable.getMessage());
                         });
 
 
@@ -51,7 +50,7 @@ public class MockServer {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
                 throw new RuntimeException("InterruptedException " +
-                        "occurred with cause "+e.getMessage());  // Of course I don't want to handle it, :P
+                        "occurred with cause " + e.getMessage());  // Of course I don't want to handle it, :P
             }
             promise.complete("sleeping operation was successful");
         }, true);
