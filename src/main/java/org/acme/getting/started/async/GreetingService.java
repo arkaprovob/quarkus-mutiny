@@ -66,7 +66,7 @@ public class GreetingService {
                     return Uni.createFrom().emitter(em -> {
                         ioSimulation(param, Thread.currentThread().getName())
                                 .subscribe()
-                                .with(success -> em.complete(success.bodyAsString()), //putting result of uni ioSimulation into the callback
+                                .with(success -> em.complete(success.bodyAsString()), //putting result of uni ioSimulation into the callback, also works in rest apis  on return type Uni<T> like in case of failure return the stack trace to the user
                                         exception -> {
                                             log.info("the following error occurred before sending to em.complete {}", exception.getMessage());
                                             em.fail(exception);
