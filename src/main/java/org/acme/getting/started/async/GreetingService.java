@@ -37,7 +37,7 @@ public class GreetingService {
                 .createFrom().completionStage(CompletableFuture.supplyAsync(() -> "hello"));
         return Uni
                 .createFrom()
-                .item(name) //synchronous now imagine you have retrieve a value from an I/O call you will have to pass a supplier, ref README.md#Links.1
+                .item(name) //this is synchronous, but if you have retrieve a value from an I/O call you will have to pass a supplier, ref README.md#Links.1
                 .emitOn(emitExecutor)
                 .onItem() //not required just used for experimental purpose
                 .transform(k -> k) //not required just used for experimental purpose
